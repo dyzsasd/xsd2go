@@ -1,0 +1,2 @@
+class XMLParseMixin(object):
+    pass

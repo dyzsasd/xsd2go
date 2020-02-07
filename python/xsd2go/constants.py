@@ -1,0 +1,1 @@
+XSD_NS = "xsd"
