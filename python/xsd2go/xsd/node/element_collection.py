@@ -1,10 +1,8 @@
 from cached_property import cached_property
 from lxml import etree
 
-from xsd2go.xsd.util import parse_tag, parse_ref_value
-
+from xsd2go.xsd.util import parse_ref_value, parse_tag
 from .base import Node
-from .element import Element
 
 
 def create_collection(schema, node):
@@ -19,23 +17,7 @@ def create_collection(schema, node):
         return Sequence(schema, node)
     else:
         raise RuntimeError(
-            "Cannot parse the collectio node:\n%s" % etree.tostring(node).decode("utf8"))
-
-
-class ElementContainerMixin(object):
-    def _parse_elements(self):
-        self.element_collection = None
-
-        collection_nodes = self.node.xpath(
-            "*[self::xsd:group or self::xsd:all or self::xsd:choice or self::xsd:sequence]",
-            namespaces=self.schema.nsmap
-        )
-        if collection_nodes:
-            self.element_collection = create_collection(self.schema, collection_nodes[0])
-
-        if self.element_collection is None:
-            # By default, the indicator is Sequence
-            self.indicator = Sequence(self.schema, self.node)
+            "Cannot parse the collection node:\n%s" % etree.tostring(node).decode("utf8"))
 
 
 class ElementCollection(Node):
@@ -47,6 +29,8 @@ class ElementCollection(Node):
         return elements
 
     def _parse(self):
+        from .element import Element
+
         self.nested_elements = [
             Element(self.schema, node)
             for node in self.node.xpath(
@@ -89,4 +73,3 @@ class Choice(ElementCollection):
 
 class Sequence(ElementCollection):
     pass
-        

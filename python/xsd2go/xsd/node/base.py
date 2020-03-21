@@ -6,7 +6,6 @@ class Node(object):
     def __init__(self, schema, node):
         self.schema = schema
         self.node = node
-        self._parse()
 
     def is_same_ns(self, ns):
         if self.schema.target_ns is None:
@@ -22,10 +21,6 @@ class Node(object):
             "xsd:annotation/xsd:documentation/text()",
             namespaces=self.schema.nsmap
         )
-
-    def _parse(self):
-        raise NotImplementedError(
-            "Method `parse` isn't implemented in class %s" % self.__class__)
 
     def export(self, default_name, **kwargs):
         raise NotImplementedError(

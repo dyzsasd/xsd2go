@@ -12,9 +12,9 @@ def parse_xsd_files(files, base_path=""):
     for xsd_file in files:
         schema = project.load_schema(xsd_file)
         for el in schema.schema_element_collection:
-            print(el.name)
-            print(el.type_instance)
-            print(el.docs)
+            if el.name == "AirShoppingRQ":
+                type_instance = el.type_instance
+                print(type_instance.name)
 
     return project
 

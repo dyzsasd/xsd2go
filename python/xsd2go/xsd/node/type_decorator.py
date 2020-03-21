@@ -1,14 +1,11 @@
 from cached_property import cached_property
 
 from xsd2go.constants import XSD_NS
-
-from xsd2go.xsd.type import name2base_class
-from xsd2go.xsd.util import parse_attrib_value, parse_tag, parse_ref_value
+from xsd2go.xsd.util import parse_ref_value, parse_tag
 
 from .base import Node
-from .attribute import AttributeContainerMixin
-from .element_collection import ElementContainerMixin
-from .type import SimpleType
+from .base_type import name2base_class
+
 
 
 class TypeDecorator(Node):
@@ -17,6 +14,8 @@ class TypeDecorator(Node):
             "Method `wrapped_type` isn't implemented in class %s" % self.__class__)
 
     def _parse(self):
+        from .simple_type import SimpleType
+
         self.nested_type = None
         simple_type_nodes = self.node.xpath(
             "xsd:simpleType",
@@ -30,7 +29,7 @@ class TypeDecorator(Node):
 class Restriction(TypeDecorator):
     @cached_property
     def wrapped_type(self):
-        if self.nested_type is not None:
+        if hasattr(self, "nested_type") is not None:
             return self.nested_type
 
         base_type_name, base_type_ns = parse_ref_value(
@@ -108,6 +107,8 @@ class Union(Node):
             return _member_type_instances
 
     def _parse(self):
+        from .simple_type import SimpleType
+
         self.nested_types = []
         simple_type_nodes = self.node.xpath(
             "xsd:simpleType",
@@ -117,37 +118,3 @@ class Union(Node):
         for type_node in simple_type_nodes:
             self.nested_types.append(
                 SimpleType(self.schema, type_node))
-
-
-class Extension(Node, AttributeContainerMixin, ElementContainerMixin):
-    @cached_property
-    def base_type_instance(self):
-        type_name, type_ns = parse_ref_value(
-            self.node.attrib['base'], self.schema.nsmap)
-        if type_ns == self.schema.nsmap[XSD_NS]:
-            return name2base_class[type_name]()
-        else:
-            refered_type_instance = self.schema.get_type_instance(
-                type_name, type_ns)
-            if refered_type_instance is None:
-                raise RuntimeError(
-                    "Cannot find ref type for %s" % self.tostring())
-            else:
-                return refered_type_instance
-    
-    def _parse(self):
-        self._parse_attributes()
-        self._parse_elements()
-
-
-class SimpleContentRestriction(Restriction, AttributeContainerMixin):
-    def _parse(self):
-        super(SimpleContentRestriction, self)._parse(self)
-        self._parse_attributes()
-
-
-class ComplexContentRestriction(Restriction, AttributeContainerMixin, ElementContainerMixin):
-    def _parse(self):
-        super(ComplexContentRestriction, self)._parse(self)
-        self._parse_attributes()
-        self._parse_elements()

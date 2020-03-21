@@ -1,6 +1,6 @@
 from copy import deepcopy
 
-from .util import parse_attrib_value, parse_tag, parse_ref_value
+from xsd2go.xsd.util import parse_attrib_value, parse_tag, parse_ref_value
 
 
 class BaseType(object):
@@ -35,22 +35,22 @@ class Extension(object):
             self.attribute_collection.parse()
 
 
-class Restriction(object):
-    def __init__(self, base, element_collection, attribute_collection, kwargs):
-        self.base = base
-        self.base_type_instance = None
-        self.element_collection = element_collection
-        self.attribute_collection = attribute_collection
-        self.kwargs = kwargs
+# class Restriction(object):
+#     def __init__(self, base, element_collection, attribute_collection, kwargs):
+#         self.base = base
+#         self.base_type_instance = None
+#         self.element_collection = element_collection
+#         self.attribute_collection = attribute_collection
+#         self.kwargs = kwargs
 
-    def parse(self, schema):
-        if self.base_type_instance is None:
-            ns_tag, type_tag = parse_attrib_value(self.base)
-            if ns_tag is not None and schema.nsmap[ns_tag] == schema.nsmap['xsd']:
-                self.base_type_instance = name2base_class[type_tag]()
-            else:
-                self.base_type_instance = schema.get_type_instance(self.base)
-                self.base_type_instance.parse(schema)
+#     def parse(self, schema):
+#         if self.base_type_instance is None:
+#             ns_tag, type_tag = parse_attrib_value(self.base)
+#             if ns_tag is not None and schema.nsmap[ns_tag] == schema.nsmap['xsd']:
+#                 self.base_type_instance = name2base_class[type_tag]()
+#             else:
+#                 self.base_type_instance = schema.get_type_instance(self.base)
+#                 self.base_type_instance.parse(schema)
 
 
 class ComplexTypeContent(object):
