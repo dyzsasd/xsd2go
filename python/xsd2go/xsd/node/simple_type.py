@@ -3,8 +3,8 @@ from cached_property import cached_property
 from xsd2go.xsd.util import parse_ref_value, parse_tag
 from xsd2go.constants import XSD_NS
 
+from xsd2go.xsd_go_type import xsd2go_type
 from .base import Node
-from .base_type import name2base_class
 from .type_decorator import SimpleTypeRestriction, List, Union
 
 
@@ -19,6 +19,16 @@ class SimpleType(Node):
         name_attr = self.node.attrib.get('name')
         name_attr = (name_attr and name_attr[0]) or None
         return name_attr
+
+    def type_name(self):
+        if self.content is None:
+            raise RuntimeError("%s def is empty", self.name)
+        return self.content.type_name()
+
+    def type_def(self):
+        if self.content is None:
+            raise RuntimeError("%s def is empty", self.name)
+        return self.content.type_def()
 
     def _parse(self):
         self.content = None

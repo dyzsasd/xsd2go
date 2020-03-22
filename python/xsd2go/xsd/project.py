@@ -8,17 +8,17 @@ from .schema import Schema
 class Project(object):
     def __init__(self, path):
         self.path = path
-        self.schema = {}
+        self.schemas = {}
 
     def load_schema(self):
         xsd_files = glob.glob(
             join(self.path, "*.xsd"), recursive=True)
         for f in xsd_files:
-            if f not in self.schema:
+            if f not in self.schemas:
                 print('loading %s' % f)
                 rel_path = relpath(f, self.path)
-                self.schema[rel_path] = Schema(self, f).load()
-        s = self.schema['AirShoppingRQ.xsd']
+                self.schemas[rel_path] = Schema(self, f).load()
+        s = self.schemas['IATA_AirShoppingRQ.xsd']
 
-        for e in s.schema_element_collection:
-            print(e.name)
+        for e in s.element_collection:
+            print(e.type_instance.name)

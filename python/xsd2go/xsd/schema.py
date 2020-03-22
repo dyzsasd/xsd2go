@@ -14,7 +14,7 @@ from .node.element_collection import Group
 
 
 class Schema(object):
-    def __init__(self, project, file_path):
+    def __init__(self, project, file_path, recursive=False):
         self.project = project
         self.file_path = file_path
         self.xml_tree = etree.parse(open(file_path))
@@ -25,8 +25,11 @@ class Schema(object):
         self.name2attribute_group = {}
         self.name2element_group = {}
 
+        self.recursive = recursive
+
     def add_element(self, element):
-        self.name2element[element.node.attrib['name']] = element
+        if self.recursive:
+            self.name2element[element.node.attrib['name']] = element
 
     def get_element(self, name, ns):
         element = self.name2element.get(name)
@@ -42,7 +45,7 @@ class Schema(object):
         return element
 
     def add_type_instance(self, type_instance):
-        if type_instance.node.attrib['name'] in self.name2type_instance:
+        if self.recursive and type_instance.node.attrib['name'] in self.name2type_instance:
             raise RuntimeError(
                 "Duplicate type definition in %s" % self.file_path)
         self.name2type_instance[type_instance.node.attrib['name']] = type_instance
@@ -60,7 +63,7 @@ class Schema(object):
         return type_instance
 
     def add_attribute(self, attribute):
-        if attribute.node.attrib['name'] in self.name2attribute:
+        if self.recursive and attribute.node.attrib['name'] in self.name2attribute:
             raise RuntimeError(
                 "Duplicate attribute %s definition in %s",
                 attribute.node.attrib['name'], self.file_path
@@ -81,7 +84,8 @@ class Schema(object):
         return attribute
 
     def add_attribute_group(self, attribute_group):
-        self.name2attribute_group[attribute_group.node.attrib['name']] = attribute_group
+        if self.recursive:
+            self.name2attribute_group[attribute_group.node.attrib['name']] = attribute_group
 
     def get_attribute_group(self, name, ns):
         attribute_group = self.name2attribute_group.get(name)
@@ -95,6 +99,10 @@ class Schema(object):
                 if attribute_group is not None and not attribute_group.is_same_ns(ns):
                     attribute_group = None
         return attribute_group
+
+    def add_element_group(self, element_group):
+        if self.recursive:
+            self.name2element_group[element_group.node.attrib['name']] = element_group
 
     def get_element_group(self, name, ns):
         element_group = self.name2element_group.get(name)
@@ -143,25 +151,42 @@ class Schema(object):
         return imported_schema_paths
 
     def load(self):
-        self.schema_element_collection = [
+        self.element_collection = [
             Element(self, node)
             for node in self.root.xpath("xsd:element", namespaces=self.nsmap)
         ]
-        self.schema_attribute_collection = [
+        self.attribute_collection = [
             Attribute(self, node)
             for node in self.root.xpath("xsd:attribute", namespaces=self.nsmap)
         ]
 
+        if not self.recursive:
+            for element in self.element_collection:
+                if 'name' in element.node.attrib:
+                    self.name2element[element.node.attrib['name']] = element
+            
+            for attribute in self.attribute_collection:
+                if 'name' in attribute.node.attrib:
+                    self.name2attribute[attribute.node.attrib['name']] = attribute
+
         for node in self.root.xpath('xsd:simpleType', namespaces=self.nsmap):
-            SimpleType(self, node)
+            t = SimpleType(self, node)
+            if not self.recursive and 'name' in t.node.attrib:
+                self.name2type_instance[t.node.attrib['name']] = t
 
         for node in self.root.xpath('xsd:complexType', namespaces=self.nsmap):
-            ComplexType(self, node)
+            t = ComplexType(self, node)
+            if not self.recursive and 'name' in t.node.attrib:
+                self.name2type_instance[t.node.attrib['name']] = t
 
         for node in self.root.xpath('xsd:attributeGroup', namespaces=self.nsmap):
-            AttributeGroup(self, node)
+            g = AttributeGroup(self, node)
+            if not self.recursive and 'name' in g.node.attrib:
+                self.name2attribute_group[g.node.attrib['name']] = g
 
         for node in self.root.xpath('xsd:group', namespaces=self.nsmap):
-            Group(self, node)
+            g = Group(self, node)
+            if not self.recursive and 'name' in g.node.attrib:
+                self.name2element_group[g.node.attrib['name']] = g
 
         return self

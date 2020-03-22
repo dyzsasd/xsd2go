@@ -1,8 +1,12 @@
 from cached_property import cached_property
 from lxml import etree
 
+from xsd2go.xsd_go_type import xsd2go_type
 from xsd2go.xsd.util import parse_ref_value
+from xsd2go.constants import XSD_NS
+
 from .base import Node
+from .simple_type import SimpleType
 
 
 class Element(Node):
@@ -83,3 +87,11 @@ class Element(Node):
 
         if complex_type_node:
             self.nested_type = ComplexType(self.schema, complex_type_node[0])
+
+    def to_string(self):
+        type_name, type_ns = parse_ref_value(
+                self.node.attrib['type'], self.schema.nsmap)
+        if type_ns == self.schema.nsmap[XSD_NS]:
+            type_name = xsd2go_type[type_name]
+        elif isinstance(self.type_instance, SimpleType):
+            type_name = self.type_instance.name
