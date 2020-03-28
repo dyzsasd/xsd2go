@@ -64,12 +64,12 @@ class Attribute(Node):
         if simple_type_node:
             self.nested_type = SimpleType(self.schema, simple_type_node[0])
 
-    def to_string(self):
+    def export_go_def(self):
         if self.nested_type is None and self.ref_attribute is None and 'type' not in self.node.attrib:
             return None
 
         type_name, type_ns = self.parse_ref_value(
-                self.node.attrib['type'])
+                self.node.attrib.get('type', ''))
 
         if type_ns == self.schema.nsmap[XSD_NS]:
             go_struct_name = xsd2go_type.get(type_name)

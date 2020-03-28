@@ -42,8 +42,10 @@ class Schema(object):
             for schema_path in self.included_schema_paths + self.imported_schema_paths:
                 schema = self.project.schemas[schema_path]
                 element = schema.get_element(name, ns)
-                if element is not None and element.ns is not None and element.ns != ns:
+                if element is not None and not element.is_same_ns(ns):
                     element = None
+                if element is not None:
+                    break
         return element
 
     def add_type_instance(self, type_instance):
@@ -62,6 +64,8 @@ class Schema(object):
                 type_instance = schema.get_type_instance(name, ns)
                 if type_instance is not None and not type_instance.is_same_ns(ns):
                     type_instance = None
+                if type_instance is not None:
+                    break
         return type_instance
 
     def add_attribute(self, attribute):
@@ -79,10 +83,12 @@ class Schema(object):
         
         if attribute is None:
             for schema_path in self.included_schema_paths + self.imported_schema_paths:
-                schema = self.project.path2schema[schema_path]
+                schema = self.project.schemas[schema_path]
                 attribute = schema.get_attribute(name, ns)
                 if attribute is not None and not attribute.is_same_ns(ns):
                     attribute = None
+                if attribute is not None:
+                    break
         return attribute
 
     def add_attribute_group(self, attribute_group):
@@ -96,10 +102,12 @@ class Schema(object):
 
         if attribute_group is None:
             for schema_path in self.included_schema_paths + self.imported_schema_paths:
-                schema = self.project.path2schema[schema_path]
+                schema = self.project.schemas[schema_path]
                 attribute_group = schema.get_attribute_group(name, ns)
                 if attribute_group is not None and not attribute_group.is_same_ns(ns):
                     attribute_group = None
+                if attribute_group is not None:
+                    break
         return attribute_group
 
     def add_element_group(self, element_group):
@@ -113,10 +121,12 @@ class Schema(object):
         
         if element_group is None:
             for schema_path in self.included_schema_paths + self.imported_schema_paths:
-                schema = self.project.path2schema[schema_path]
+                schema = self.project.schemas[schema_path]
                 element_group = schema.get_element_group(name, ns)
                 if element_group is not None and not element_group.is_same_ns(ns):
                     element_group = None
+                if element_group is not None:
+                    break
         return element_group
 
     @cached_property

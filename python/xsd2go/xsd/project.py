@@ -17,8 +17,9 @@ class Project(object):
             if f not in self.schemas:
                 print('loading %s' % f)
                 rel_path = relpath(f, self.path)
-                self.schemas[rel_path] = Schema(self, f, 'go', 'airshopping').load()
-        s = self.schemas['IATA_AirShoppingRQ.xsd']
+                self.schemas[rel_path] = Schema(self, f, 'airshopping', 'airshopping').load()
+        s = self.schemas['AirShoppingRQ.xsd']
 
-        for e in s.element_collection:
-            print(e.type_instance.export_go_struct())
+        for name, type_instance in s.name2type_instance.items():
+            print("exporting %s" % name)
+            type_instance.export_go_struct()

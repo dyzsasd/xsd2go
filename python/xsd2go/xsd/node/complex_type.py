@@ -56,18 +56,18 @@ class ComplexType(Node, AttributeContainerMixin, ElementContainerMixin):
             return self.content.go_struct_attributes()
         else:
             for attr in self.attributes:
-                line = attr.to_string()
+                line = attr.export_go_def()
                 if line is not None:
                     lines.append(line)
             for elem in self.elements:
-                line = elem.to_string()
+                line = elem.export_go_def()
                 if line is not None:
                     lines.append(line)
         return lines
 
     def go_struct_def(self):
         lines = []
-        lines.append("type %s struct {" % self.name)
+        lines.append("struct {")
         lines.extend(self.go_struct_attributes())
         lines.append("}")
         return '\n'.join(lines)
@@ -77,7 +77,7 @@ class ComplexType(Node, AttributeContainerMixin, ElementContainerMixin):
         lines = [
             "package %s" % self.schema.package,
             "",
-            self.go_struct_def(),
+            "type %s " % self.name + self.go_struct_def(),
             ""
         ]
         fout = open(join(self.schema.base_path, file_name), 'w')
@@ -97,6 +97,10 @@ class Extension(Node, AttributeContainerMixin, ElementContainerMixin):
             )
         refered_type_instance = self.schema.get_type_instance(
             type_name, type_ns)
+
+        if isinstance(refered_type_instance, ComplexType):
+            refered_type_instance.export_go_struct()
+
         if refered_type_instance is None:
             raise RuntimeError(
                 "Cannot find ref type for %s" % self.tostring())
@@ -129,11 +133,11 @@ class Extension(Node, AttributeContainerMixin, ElementContainerMixin):
             lines.append(self.base_type_instance.go_struct_name() + ";")
 
         for attr in self.attributes:
-            line = attr.to_string()
+            line = attr.export_go_def()
             if line is not None:
                 lines.append(line)
         for elem in self.elements:
-            line = elem.to_string()
+            line = elem.export_go_def()
             if line is not None:
                 lines.append(line)
         return lines

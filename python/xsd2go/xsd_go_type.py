@@ -44,4 +44,6 @@ xsd2go_type = {
     "anyURI": "string",
     "double": "float32",
     "float": "float32",
+
+    "language": "string",
 }

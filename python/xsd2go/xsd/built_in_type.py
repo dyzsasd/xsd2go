@@ -153,4 +153,6 @@ name2base_class = {
     "anyURI": String,
     "double": Decimal,
     "float": Decimal,
+
+    "language": String,
 }

@@ -29,9 +29,10 @@ class Element(Node):
 
     @cached_property
     def ref_element(self):
-        ref_name = self.node.attrib.get('ref')
+        ref_name, ref_ns = self.parse_ref_value(
+            self.node.attrib.get('ref', ""))
         if ref_name is not None:
-            ref_element = self.schema.get_element(ref_name)
+            ref_element = self.schema.get_element(ref_name, ref_ns)
             if ref_element is None:
                 raise RuntimeError(
                     "Cannot find ref element for %s" % self.tostring())
@@ -50,8 +51,6 @@ class Element(Node):
                     "Cannot find type for %s" % self.tostring()) 
             type_name, type_ns = self.parse_ref_value(
                 self.node.attrib['type'])
-            if type_ns is None:
-                type_ns = self.schema.nsmap['default']
             if type_ns == self.schema.nsmap[XSD_NS]:
                 raise RuntimeError(
                     'Cannot return type instance for builtin type %s',
@@ -98,40 +97,55 @@ class Element(Node):
         if complex_type_node:
             self.nested_type = ComplexType(self.schema, complex_type_node[0])
 
-        if self.nested_type is not None and self.nested_type.name is None:
-            self.nested_type.name = self.name + "Type"
+        # if self.nested_type is not None and self.nested_type.name is None:
+        #     self.nested_type.name = self.name + "Type"
 
-    def to_string(self):
+    def export_go_def(self):
         from .complex_type import ComplexType
+        from .simple_type import SimpleType
 
+        # TODO: find why there is some elements without type
         if self.nested_type is None and self.ref_element is None and 'type' not in self.node.attrib:
             return None
+
+        # If the element is defined in other file
+        if self.ref_element is not None:
+            return self.ref_element.export_go_def()
 
         type_name, type_ns = self.parse_ref_value(
             self.node.attrib.get('type', ''))
 
         list_sign = (self.node.attrib.get('maxOccurs', '1') != '1' and '[]') or ''
         pointer_sign = ''
+        go_type = ''
 
+        # If element's type is builtin type, we don't use pointer
         if type_ns == self.schema.nsmap[XSD_NS]:
-            go_struct_name = xsd2go_type.get(type_name)
-            if go_struct_name is None:
+            go_type = xsd2go_type.get(type_name)
+            if go_type is None:
                 raise RuntimeError(
                     "Cannot find predefined go type for %s",
                     self.node.attrib['type']
                 )
         else:
             go_struct_name = self.type_instance.go_struct_name()
-            if go_struct_name is None:
+            # For simple type, it should always have a go_struct_name
+            if go_struct_name is None and isinstance(self.type_instance, SimpleType):
                 raise RuntimeError(
-                    "Cannot find type name for %s", self.node.attrib['type'])
-            if isinstance(self.type_instance, ComplexType):
+                    "Cannot define an this element as an member of struct:\n%s",
+                    self.tostring()
+                )
+            elif go_struct_name is None and isinstance(self.type_instance, ComplexType):
+                go_type = self.type_instance.go_struct_def()
+                pointer_sign = '*'
+            else:
                 self.type_instance.export_go_struct()
+                go_type = go_struct_name
                 pointer_sign = '*'
         
         return '{field} {list_sign}{pointer_sign}{type} `xml:"{xml_field}"`;'.format(**{
             "field": self.name,
-            "type": go_struct_name,
+            "type": go_type,
             "xml_field": self.name,
             "pointer_sign": pointer_sign,
             "list_sign": list_sign,

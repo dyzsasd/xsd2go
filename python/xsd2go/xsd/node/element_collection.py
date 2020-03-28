@@ -39,7 +39,7 @@ class ElementCollection(Node):
             )
         ]
         self.collections = [
-            Element(self.schema, node)
+            create_collection(self.schema, node)
             for node in self.node.xpath(
                 "*[self::xsd:group or self::xsd:all or self::xsd:choice or self::xsd:sequence]",
                 namespaces=self.schema.nsmap
