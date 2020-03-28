@@ -14,7 +14,6 @@ def parse_xsd_files(files, base_path=""):
         for el in schema.schema_element_collection:
             if el.name == "AirShoppingRQ":
                 type_instance = el.type_instance
-                print(type_instance.name)
 
     return project
 

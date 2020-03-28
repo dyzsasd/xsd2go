@@ -14,10 +14,12 @@ from .node.element_collection import Group
 
 
 class Schema(object):
-    def __init__(self, project, file_path, recursive=False):
+    def __init__(self, project, file_path, base_path, package, recursive=False):
         self.project = project
         self.file_path = file_path
         self.xml_tree = etree.parse(open(file_path))
+        self.base_path = base_path
+        self.package = package
 
         self.name2element = {}
         self.name2attribute = {}

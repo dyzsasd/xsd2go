@@ -44,8 +44,8 @@ class AttributeGroup(Node, AttributeContainerMixin):
     @cached_property
     def attributes(self):
         if 'ref' in self.node.attrib:
-            ref_name, ref_ns = parse_ref_value(
-                self.node.attrib['ref'], self.schema.nsmap)
+            ref_name, ref_ns = self.parse_ref_value(
+                self.node.attrib['ref'])
             refered_attribute_group = self.schema.get_attribute_group(
                 ref_name, ref_ns)
             if refered_attribute_group is None:

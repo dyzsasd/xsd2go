@@ -51,8 +51,8 @@ class Group(ElementCollection):
     @cached_property
     def elements(self):
         if 'ref' in self.node.attrib:
-            ref_name, ref_ns = parse_ref_value(
-                self.node.attrib['ref'], self.schema.nsmap)
+            ref_name, ref_ns = self.parse_ref_value(
+                self.node.attrib['ref'])
             refered_element_group = self.schema.get_element_group(
                 ref_name, ref_ns)
             if refered_element_group is None:

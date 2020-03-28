@@ -2,9 +2,11 @@ import re
 
 
 def parse_ref_value(value, nsmap):
+    if not value:
+        return None, None
     name, ns_tag = parse_attrib_value(value)
     if ns_tag is not None:
-        return nsmap.get(ns_tag)
+        return name, nsmap.get(ns_tag)
     return name, None
 
 

@@ -1,6 +1,8 @@
 from cached_property import cached_property
 
+from xsd2go.constants import XSD_NS
 from xsd2go.xsd.util import parse_ref_value, parse_tag
+from xsd2go.xsd_go_type import xsd2go_type
 
 from .base import Node
 from .simple_type import SimpleType
@@ -41,8 +43,8 @@ class Attribute(Node):
         elif self.ref_attribute is not None:
             return self.ref_attribute.type_instance
         else:
-            type_name, type_ns = parse_ref_value(
-                self.node.attrib['type'], self.schema.nsmap)
+            type_name, type_ns = self.parse_ref_value(
+                self.node.attrib['type'])
             refered_type_instance = self.schema.get_type_instance(
                 type_name, type_ns)
             if refered_type_instance is None:
@@ -61,3 +63,29 @@ class Attribute(Node):
 
         if simple_type_node:
             self.nested_type = SimpleType(self.schema, simple_type_node[0])
+
+    def to_string(self):
+        if self.nested_type is None and self.ref_attribute is None and 'type' not in self.node.attrib:
+            return None
+
+        type_name, type_ns = self.parse_ref_value(
+                self.node.attrib['type'])
+
+        if type_ns == self.schema.nsmap[XSD_NS]:
+            go_struct_name = xsd2go_type.get(type_name)
+            if go_struct_name is None:
+                raise RuntimeError(
+                    "Cannot find predefined go type for %s",
+                    self.node.attrib['type']
+                )
+        else:
+            go_struct_name = self.type_instance.go_struct_name()
+            if go_struct_name is None:
+                raise RuntimeError(
+                    "Cannot find type name for %s", self.node.attrib['type'])
+        
+        return '{field} {type} `xml:"{xml_field},attr"`;'.format(**{
+            "field": self.name,
+            "type": go_struct_name,
+            "xml_field": self.name
+        })

@@ -32,7 +32,7 @@ from xsd2go.xsd_go_type import xsd2go_type
 #         if hasattr(self, "nested_type") is not None:
 #             return self.nested_type
 
-#         base_type_name, base_type_ns = parse_ref_value(
+#         base_type_name, base_type_ns = self.parse_ref_value(
 #             self.node.attrib['base'], self.schema.nsmap)
 #         if base_type_ns == self.schema.nsmap[XSD_NS]:
 #             return name2base_class[base_type_name]()
@@ -47,11 +47,14 @@ from xsd2go.xsd_go_type import xsd2go_type
         
 
 class SimpleTypeRestriction(Node):
+    def _parse(self):
+        pass
+
     "Restriction element nested in simple type"
     # TODO: ADD restriction parsing for msg validation
-    def type_name(self):
-        base_type_name, base_type_ns = parse_ref_value(
-            self.node.attrib['base'], self.schema.nsmap)
+    def go_struct_name(self):
+        base_type_name, base_type_ns = self.parse_ref_value(
+            self.node.attrib['base'])
         if base_type_ns == self.schema.nsmap[XSD_NS]:
             return xsd2go_type[base_type_name]
         else:
@@ -61,25 +64,31 @@ class SimpleTypeRestriction(Node):
                 raise RuntimeError(
                     "Cannot find ref type for %s" % self.tostring())
             else:
-                return refered_type_instance.type_name()
+                return refered_type_instance.go_struct_name()
 
-    def type_def(self):
+    def go_struct_attributes(self):
         return None
 
 
 class List(Node):
+    def _parse(self):
+        pass
+
     # TODO: ADD list parsing for msg validation
-    def type_name(self):
+    def go_struct_name(self):
         return "string"
 
-    def type_def(self):
+    def go_struct_attributes(self):
         return None
 
 
 class Union(Node):
+    def _parse(self):
+        pass
+
     # TODO: ADD Union parsing for msg validation
-    def type_name(self):
+    def go_struct_name(self):
         return "string"
 
-    def type_def(self):
+    def go_struct_attributes(self):
         return None

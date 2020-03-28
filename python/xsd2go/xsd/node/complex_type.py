@@ -1,13 +1,15 @@
+from os.path import join
+
 from cached_property import cached_property
 
 from xsd2go.constants import XSD_NS
 from xsd2go.xsd.util import parse_ref_value
 
+from xsd2go.xsd_go_type import xsd2go_type
+
 from .base import Node
-from .base_type import name2base_class
 from .attribute_container import AttributeContainerMixin
 from .element_container import ElementContainerMixin
-from .type_decorator import Restriction
 
 
 class ComplexType(Node, AttributeContainerMixin, ElementContainerMixin):
@@ -45,39 +47,207 @@ class ComplexType(Node, AttributeContainerMixin, ElementContainerMixin):
             self._parse_attributes()
             self._parse_elements()
 
+    def go_struct_name(self):
+        return self.name
+
+    def go_struct_attributes(self):
+        lines = []
+        if self.content is not None:
+            return self.content.go_struct_attributes()
+        else:
+            for attr in self.attributes:
+                line = attr.to_string()
+                if line is not None:
+                    lines.append(line)
+            for elem in self.elements:
+                line = elem.to_string()
+                if line is not None:
+                    lines.append(line)
+        return lines
+
+    def go_struct_def(self):
+        lines = []
+        lines.append("type %s struct {" % self.name)
+        lines.extend(self.go_struct_attributes())
+        lines.append("}")
+        return '\n'.join(lines)
+    
+    def export_go_struct(self):
+        file_name = self.name + '.go'
+        lines = [
+            "package %s" % self.schema.package,
+            "",
+            self.go_struct_def(),
+            ""
+        ]
+        fout = open(join(self.schema.base_path, file_name), 'w')
+        fout.write('\n'.join(lines))
+        fout.close()
+
 
 class Extension(Node, AttributeContainerMixin, ElementContainerMixin):
     @cached_property
     def base_type_instance(self):
-        type_name, type_ns = parse_ref_value(
-            self.node.attrib['base'], self.schema.nsmap)
+        type_name, type_ns = self.parse_ref_value(
+            self.node.attrib['base'])
         if type_ns == self.schema.nsmap[XSD_NS]:
-            return name2base_class[type_name]()
-        else:
-            refered_type_instance = self.schema.get_type_instance(
-                type_name, type_ns)
-            if refered_type_instance is None:
-                raise RuntimeError(
-                    "Cannot find ref type for %s" % self.tostring())
-            else:
-                return refered_type_instance
+            raise RuntimeError(
+                'Cannot return base type instance for builtin type %s',
+                self.node.attrib['type']
+            )
+        refered_type_instance = self.schema.get_type_instance(
+            type_name, type_ns)
+        if refered_type_instance is None:
+            raise RuntimeError(
+                "Cannot find ref type for %s" % self.tostring())
+
+        return refered_type_instance
     
     def _parse(self):
         self._parse_attributes()
         self._parse_elements()
 
+    def go_struct_attributes(self):
+        from .simple_type import SimpleType
 
-class SimpleContentRestriction(Restriction, AttributeContainerMixin):
+        lines = []
+        type_name, type_ns = self.parse_ref_value(
+            self.node.attrib['base'])
+        if type_ns == self.schema.nsmap[XSD_NS]:
+            go_struct_name = xsd2go_type.get(type_name)
+            if go_struct_name is None:
+                raise RuntimeError(
+                    "Cannot find predefined go type for %s",
+                    self.node.attrib['base']
+                )
+            lines.append(
+                'Text %s `xml:",chardata"`;' % go_struct_name)
+        elif isinstance(self.base_type_instance, SimpleType):
+            lines.append(
+                'Text %s `xml:",chardata"`;' % self.base_type_instance.go_struct_name())
+        else:
+            lines.append(self.base_type_instance.go_struct_name() + ";")
+
+        for attr in self.attributes:
+            line = attr.to_string()
+            if line is not None:
+                lines.append(line)
+        for elem in self.elements:
+            line = elem.to_string()
+            if line is not None:
+                lines.append(line)
+        return lines
+
+
+class SimpleContentRestriction(Node, AttributeContainerMixin):
     def _parse(self):
-        super(SimpleContentRestriction, self)._parse()
+        from .simple_type import SimpleType
+
+        self.nested_type = None
+        simple_type_nodes = self.node.xpath(
+            "xsd:simpleType",
+            namespaces=self.schema.nsmap
+        )
+
+        if simple_type_nodes:
+            self.nested_type = SimpleType(self.schema, simple_type_nodes[0])
         self._parse_attributes()
 
+    @cached_property
+    def base_type_instance(self):
+        if self.nested_type is not None:
+            return self.nested_type
 
-class ComplexContentRestriction(Restriction, AttributeContainerMixin, ElementContainerMixin):
+        type_name, type_ns = self.parse_ref_value(
+            self.node.attrib['base'])
+        if type_ns == self.schema.nsmap[XSD_NS]:
+            raise RuntimeError(
+                'Cannot return base type instance for builtin type %s',
+                self.node.attrib['type']
+            )
+        refered_type_instance = self.schema.get_type_instance(
+            type_name, type_ns)
+        if refered_type_instance is None:
+            raise RuntimeError(
+                "Cannot find ref type for %s" % self.tostring())
+
+        return refered_type_instance
+    
+    def go_struct_attributes(self):
+        from .simple_type import SimpleType
+
+        lines = []
+        type_name, type_ns = self.parse_ref_value(
+            self.node.attrib['base'])
+        if type_ns == self.schema.nsmap[XSD_NS]:
+            go_struct_name = xsd2go_type.get(type_name)
+            if go_struct_name is None:
+                raise RuntimeError(
+                    "Cannot find predefined go type for %s",
+                    self.node.attrib['base']
+                )
+            lines.append(go_struct_name + ";")
+        elif isinstance(self.base_type_instance, SimpleType):
+            lines.append(self.base_type_instance.go_struct_name() + ";")
+        else:
+            lines.append(self.base_type_instance.go_struct_name() + ";")
+        return lines
+
+
+class ComplexContentRestriction(Node, AttributeContainerMixin, ElementContainerMixin):
     def _parse(self):
-        super(ComplexContentRestriction, self)._parse()
+        from .simple_type import SimpleType
+
+        self.nested_type = None
+        simple_type_nodes = self.node.xpath(
+            "xsd:simpleType",
+            namespaces=self.schema.nsmap
+        )
+
+        if simple_type_nodes:
+            self.nested_type = SimpleType(self.schema, simple_type_nodes[0])
         self._parse_attributes()
         self._parse_elements()
+
+    @cached_property
+    def base_type_instance(self):
+        if self.nested_type is not None:
+            return self.nested_type
+
+        type_name, type_ns = self.parse_ref_value(
+            self.node.attrib['base'])
+        if type_ns == self.schema.nsmap[XSD_NS]:
+            raise RuntimeError(
+                'Cannot return base type instance for builtin type %s',
+                self.node.attrib['type']
+            )
+        refered_type_instance = self.schema.get_type_instance(
+            type_name, type_ns)
+        if refered_type_instance is None:
+            raise RuntimeError(
+                "Cannot find ref type for %s" % self.tostring())
+
+        return refered_type_instance
+
+    def go_struct_attributes(self):
+        from .simple_type import SimpleType
+
+        lines = []
+        type_name, type_ns = self.parse_ref_value(
+            self.node.attrib['base'])
+        if type_ns == self.schema.nsmap[XSD_NS]:
+            go_struct_name = xsd2go_type.get(type_name)
+            if go_struct_name is None:
+                raise RuntimeError(
+                    "Cannot find predefined go type for %s",
+                    self.node.attrib['base']
+                )
+            lines.append(go_struct_name + ";")
+        elif isinstance(self.base_type_instance, SimpleType):
+            lines.append(self.base_type_instance.go_struct_name() + ";")
+        else:
+            lines.append(self.base_type_instance.go_struct_name() + ";")
+        return lines
 
 
 class Content(Node):
@@ -99,6 +269,11 @@ class SimpleContent(Content):
             self.decorator = SimpleContentRestriction(
                 self.schema, restrictions[0])
 
+    def go_struct_attributes(self):
+        if self.decorator is None:
+            raise RuntimeError("decorator is empty")
+        return self.decorator.go_struct_attributes()
+
 
 class ComplexContent(Content):
     def _parse(self):
@@ -114,3 +289,8 @@ class ComplexContent(Content):
         if restrictions:
             self.decorator = ComplexContentRestriction(
                 self.schema, restrictions[0])
+
+    def go_struct_attributes(self):
+        if self.decorator is None:
+            raise RuntimeError("decorator is empty")
+        return self.decorator.go_struct_attributes()

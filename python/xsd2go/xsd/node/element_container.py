@@ -1,4 +1,11 @@
+from cached_property import cached_property
+
+
 class ElementContainerMixin(object):
+    @cached_property
+    def elements(self):
+        return self.element_collection.elements
+
     def _parse_elements(self):
         from .element_collection import Sequence, create_collection
 
@@ -13,4 +20,4 @@ class ElementContainerMixin(object):
 
         if self.element_collection is None:
             # By default, the indicator is Sequence
-            self.indicator = Sequence(self.schema, self.node)
+            self.element_collection = Sequence(self.schema, self.node)
