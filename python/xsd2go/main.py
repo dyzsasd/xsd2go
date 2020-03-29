@@ -41,5 +41,9 @@ if __name__ == "__main__":
             raise RuntimeError("Cannot find xsd file of %s", name)
         for name, type_instance in s.name2type_instance.items():
             type_instance.export_go_struct()
+        for element in s.element_collection:
+            if element.nested_type is not None:
+                element.nested_type.export_go_struct(
+                    element.name + 'Type')
 
 

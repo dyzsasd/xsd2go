@@ -141,7 +141,8 @@ class Element(Node):
             else:
                 self.type_instance.export_go_struct()
                 go_type = go_struct_name
-                pointer_sign = '*'
+                if isinstance(self.type_instance, ComplexType):
+                    pointer_sign = '*'
         
         return '{field} {list_sign}{pointer_sign}{type} `xml:"{xml_field}"`;'.format(**{
             "field": self.name,

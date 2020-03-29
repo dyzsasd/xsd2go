@@ -72,12 +72,18 @@ class ComplexType(Node, AttributeContainerMixin, ElementContainerMixin):
         lines.append("}")
         return '\n'.join(lines)
     
-    def export_go_struct(self):
-        file_name = self.name + '.go'
+    def export_go_struct(self, name=None):
+        class_name = self.name or name
+        if class_name is None:
+            raise RuntimeError(
+                "Cannot export class without name:\n%s",
+                self.tostring()
+            )
+        file_name = class_name + '.go'
         lines = [
             "package %s" % self.schema.package,
             "",
-            "type %s " % self.name + self.go_struct_def(),
+            "type %s " % class_name + self.go_struct_def(),
             ""
         ]
         fout = open(join(self.schema.base_path, file_name), 'w')
