@@ -79,6 +79,11 @@ class ComplexType(Node, AttributeContainerMixin, ElementContainerMixin):
                 "Cannot export class without name:\n%s",
                 self.tostring()
             )
+        if class_name in self.schema.exported_class:
+            return
+        else:
+            self.schema.exported_class.add(class_name)
+
         file_name = class_name + '.go'
         lines = [
             "package %s" % self.schema.package,

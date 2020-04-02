@@ -28,6 +28,7 @@ class Schema(object):
         self.name2element_group = {}
 
         self.recursive = recursive
+        self.exported_class = set()
 
     def add_element(self, element):
         if self.recursive:
