@@ -52,16 +52,23 @@ class ComplexType(Node, AttributeContainerMixin, ElementContainerMixin):
 
     def go_struct_attributes(self):
         lines = []
+        added_attr = set()
         if self.content is not None:
             return self.content.go_struct_attributes()
         else:
             for attr in self.attributes:
                 line = attr.export_go_def()
                 if line is not None:
+                    if attr.name in added_attr:
+                        continue
+                    added_attr.add(attr.name)
                     lines.append(line)
             for elem in self.elements:
                 line = elem.export_go_def()
                 if line is not None:
+                    if elem.name in added_attr:
+                        continue
+                    added_attr.add(elem.name)
                     lines.append(line)
         return lines
 
