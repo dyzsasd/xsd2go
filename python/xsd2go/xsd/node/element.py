@@ -87,7 +87,8 @@ class Element(Node):
         )
 
         if simple_type_node:
-            self.nested_type = SimpleType(self.schema, simple_type_node[0])
+            self.nested_type = SimpleType(
+                self.schema, simple_type_node[0], self)
 
         complex_type_node = self.node.xpath(
             "xsd:complexType",

@@ -21,7 +21,7 @@ class AttributeContainerMixin(object):
             namespaces=self.schema.nsmap
         )
         self.nested_attributes = [
-            Attribute(self.schema, node)
+            Attribute(self.schema, node, self)
             for node in attribute_nodes
         ]
 

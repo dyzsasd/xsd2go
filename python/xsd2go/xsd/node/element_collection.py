@@ -32,7 +32,7 @@ class ElementCollection(Node):
         from .element import Element
 
         self.nested_elements = [
-            Element(self.schema, node)
+            Element(self.schema, node, self)
             for node in self.node.xpath(
                 "xsd:element",
                 namespaces=self.schema.nsmap

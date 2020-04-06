@@ -62,7 +62,8 @@ class Attribute(Node):
         )
 
         if simple_type_node:
-            self.nested_type = SimpleType(self.schema, simple_type_node[0])
+            self.nested_type = SimpleType(
+                self.schema, simple_type_node[0], self)
 
     def export_go_def(self):
         if self.nested_type is None and self.ref_attribute is None and 'type' not in self.node.attrib:
