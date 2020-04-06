@@ -9,8 +9,8 @@ from .type_decorator import SimpleTypeRestriction, List, Union
 
 
 class SimpleType(Node):
-    def __init__(self, schema, node):
-        super(SimpleType, self).__init__(schema, node)
+    def __init__(self, schema, node, parent):
+        super(SimpleType, self).__init__(schema, node, parent)
         if 'name' in self.node.attrib:
             self.schema.add_type_instance(self)
     
@@ -38,21 +38,21 @@ class SimpleType(Node):
         if restriction_node:
             restriction_node = restriction_node[0]
             self.content = SimpleTypeRestriction(
-                self.schema, restriction_node)
+                self.schema, restriction_node, self)
 
         list_node = self.node.xpath(
             "xsd:restriction",
             namespaces=self.schema.nsmap
         )
         if list_node:
-            self.content = List(self.schema, list_node[0])
+            self.content = List(self.schema, list_node[0], self)
 
         union_node = self.node.xpath(
             "xsd:union",
             namespaces=self.schema.nsmap
         )
         if union_node:
-            self.content = Union(self.schema, union_node[0])
+            self.content = Union(self.schema, union_node[0], self)
 
     def go_struct_def(self):
         return None

@@ -10,8 +10,8 @@ from .simple_type import SimpleType
 
 
 class Element(Node):
-    def __init__(self, schema, node):
-        super(Element, self).__init__(schema, node)
+    def __init__(self, schema, node, parent):
+        super(Element, self).__init__(schema, node, parent)
         if 'name' in self.node.attrib:
             self.schema.add_element(self)
 
@@ -95,7 +95,7 @@ class Element(Node):
         )
 
         if complex_type_node:
-            self.nested_type = ComplexType(self.schema, complex_type_node[0])
+            self.nested_type = ComplexType(self.schema, complex_type_node[0], self)
 
         # if self.nested_type is not None and self.nested_type.name is None:
         #     self.nested_type.name = self.name + "Type"

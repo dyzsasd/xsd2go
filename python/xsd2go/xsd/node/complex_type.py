@@ -13,8 +13,8 @@ from .element_container import ElementContainerMixin
 
 
 class ComplexType(Node, AttributeContainerMixin, ElementContainerMixin):
-    def __init__(self, schema, node):
-        super(ComplexType, self).__init__(schema, node)
+    def __init__(self, schema, node, parent):
+        super(ComplexType, self).__init__(schema, node, parent)
         if 'name' in self.node.attrib:
             self.schema.add_type_instance(self)
 
@@ -33,7 +33,7 @@ class ComplexType(Node, AttributeContainerMixin, ElementContainerMixin):
         )
         if simple_content:
             simple_content = simple_content[0]
-            self.content = SimpleContent(self.schema, simple_content)
+            self.content = SimpleContent(self.schema, simple_content, self)
 
         complex_content = self.node.xpath(
             "xsd:complexContent",
@@ -41,7 +41,7 @@ class ComplexType(Node, AttributeContainerMixin, ElementContainerMixin):
         )
         if complex_content:
             complex_content = complex_content[0]
-            self.content = ComplexContent(self.schema, complex_content)
+            self.content = ComplexContent(self.schema, complex_content, self)
 
         if self.content is None:
             self._parse_attributes()
@@ -172,7 +172,8 @@ class SimpleContentRestriction(Node, AttributeContainerMixin):
         )
 
         if simple_type_nodes:
-            self.nested_type = SimpleType(self.schema, simple_type_nodes[0])
+            self.nested_type = SimpleType(
+                self.schema, simple_type_nodes[0], self)
         self._parse_attributes()
 
     @cached_property
@@ -227,7 +228,8 @@ class ComplexContentRestriction(Node, AttributeContainerMixin, ElementContainerM
         )
 
         if simple_type_nodes:
-            self.nested_type = SimpleType(self.schema, simple_type_nodes[0])
+            self.nested_type = SimpleType(
+                self.schema, simple_type_nodes[0], self)
         self._parse_attributes()
         self._parse_elements()
 
@@ -283,13 +285,13 @@ class SimpleContent(Content):
         extensions = self.node.xpath(
             "xsd:extension", namespaces=self.schema.nsmap)
         if extensions:
-            self.decorator = Extension(self.schema, extensions[0])
+            self.decorator = Extension(self.schema, extensions[0], self)
 
         restrictions = self.node.xpath(
             "xsd:restriction", namespaces=self.schema.nsmap)
         if restrictions:
             self.decorator = SimpleContentRestriction(
-                self.schema, restrictions[0])
+                self.schema, restrictions[0], self)
 
     def go_struct_attributes(self):
         if self.decorator is None:
@@ -304,13 +306,13 @@ class ComplexContent(Content):
         extensions = self.node.xpath(
             "xsd:extension", namespaces=self.schema.nsmap)
         if extensions:
-            self.decorator = Extension(self.schema, extensions[0])
+            self.decorator = Extension(self.schema, extensions[0], self)
 
         restrictions = self.node.xpath(
             "xsd:restriction", namespaces=self.schema.nsmap)
         if restrictions:
             self.decorator = ComplexContentRestriction(
-                self.schema, restrictions[0])
+                self.schema, restrictions[0], self)
 
     def go_struct_attributes(self):
         if self.decorator is None:

@@ -5,16 +5,16 @@ from xsd2go.xsd.util import parse_ref_value, parse_tag
 from .base import Node
 
 
-def create_collection(schema, node):
+def create_collection(schema, node, parent):
     tag, _ = parse_tag(node.tag)
     if tag == "group":
-        return Group(schema, node)
+        return Group(schema, node, parent)
     elif tag == "all":
-        return All(schema, node)
+        return All(schema, node, parent)
     elif tag == "choice":
-        return Choice(schema, node)
+        return Choice(schema, node, parent)
     elif tag == "sequence":
-        return Sequence(schema, node)
+        return Sequence(schema, node, parent)
     else:
         raise RuntimeError(
             "Cannot parse the collection node:\n%s" % etree.tostring(node).decode("utf8"))
@@ -39,7 +39,7 @@ class ElementCollection(Node):
             )
         ]
         self.collections = [
-            create_collection(self.schema, node)
+            create_collection(self.schema, node, self)
             for node in self.node.xpath(
                 "*[self::xsd:group or self::xsd:all or self::xsd:choice or self::xsd:sequence]",
                 namespaces=self.schema.nsmap

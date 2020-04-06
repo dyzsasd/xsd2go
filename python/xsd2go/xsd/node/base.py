@@ -1,14 +1,29 @@
 from cached_property import cached_property
 from lxml import etree
 
-from xsd2go.xsd.util import parse_attrib_value
+from xsd2go.xsd.util import parse_attrib_value, parse_tag
 
 
 class Node(object):
-    def __init__(self, schema, node):
+    def __init__(self, schema, node, parent):
         self.schema = schema
         self.node = node
+        self.parent = parent
         self._parse()
+
+    @cached_property
+    def node_id(self):
+        _id = self.node.tag
+        if self.name is not None:
+            _id = _id + "-" + self.name
+        if self.parent is None:
+            return "/" + _id
+        elif self.name is None:
+            return self.parent + "/" + _id
+
+    @cached_property
+    def name(self):
+        return None
     
     def parse_ref_value(self, value):
         if not value:

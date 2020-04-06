@@ -165,11 +165,11 @@ class Schema(object):
 
     def load(self):
         self.element_collection = [
-            Element(self, node)
+            Element(self, node, None)
             for node in self.root.xpath("xsd:element", namespaces=self.nsmap)
         ]
         self.attribute_collection = [
-            Attribute(self, node)
+            Attribute(self, node, None)
             for node in self.root.xpath("xsd:attribute", namespaces=self.nsmap)
         ]
 
@@ -183,22 +183,22 @@ class Schema(object):
                     self.name2attribute[attribute.node.attrib['name']] = attribute
 
         for node in self.root.xpath('xsd:simpleType', namespaces=self.nsmap):
-            t = SimpleType(self, node)
+            t = SimpleType(self, node, None)
             if not self.recursive and 'name' in t.node.attrib:
                 self.name2type_instance[t.node.attrib['name']] = t
 
         for node in self.root.xpath('xsd:complexType', namespaces=self.nsmap):
-            t = ComplexType(self, node)
+            t = ComplexType(self, node, None)
             if not self.recursive and 'name' in t.node.attrib:
                 self.name2type_instance[t.node.attrib['name']] = t
 
         for node in self.root.xpath('xsd:attributeGroup', namespaces=self.nsmap):
-            g = AttributeGroup(self, node)
+            g = AttributeGroup(self, node, None)
             if not self.recursive and 'name' in g.node.attrib:
                 self.name2attribute_group[g.node.attrib['name']] = g
 
         for node in self.root.xpath('xsd:group', namespaces=self.nsmap):
-            g = Group(self, node)
+            g = Group(self, node, None)
             if not self.recursive and 'name' in g.node.attrib:
                 self.name2element_group[g.node.attrib['name']] = g
 

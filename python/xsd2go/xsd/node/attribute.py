@@ -8,8 +8,8 @@ from .base import Node
 from .simple_type import SimpleType
 
 class Attribute(Node):
-    def __init__(self, schema, node):
-        super(Attribute, self).__init__(schema, node)
+    def __init__(self, schema, node, parent):
+        super(Attribute, self).__init__(schema, node, parent)
         if 'name' in self.node.attrib:
             self.schema.add_attribute(self)
 

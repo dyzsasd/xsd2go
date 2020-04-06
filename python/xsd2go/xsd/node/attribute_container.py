@@ -30,14 +30,14 @@ class AttributeContainerMixin(object):
             namespaces=self.schema.nsmap
         )
         self.nested_attribute_groups = [
-            AttributeGroup(self.schema, node)
+            AttributeGroup(self.schema, node, self)
             for node in attribute_group_nodes
         ]
 
 
 class AttributeGroup(Node, AttributeContainerMixin):
-    def __init__(self, schema, node):
-        super(AttributeGroup, self).__init__(schema, node)
+    def __init__(self, schema, node, parent):
+        super(AttributeGroup, self).__init__(schema, node, parent)
         if 'name' in self.node.attrib:
             self.schema.add_attribute_group(self)
     

@@ -16,8 +16,8 @@ class ElementContainerMixin(object):
             namespaces=self.schema.nsmap
         )
         if collection_nodes:
-            self.element_collection = create_collection(self.schema, collection_nodes[0])
+            self.element_collection = create_collection(self.schema, collection_nodes[0], self)
 
         if self.element_collection is None:
             # By default, the indicator is Sequence
-            self.element_collection = Sequence(self.schema, self.node)
+            self.element_collection = Sequence(self.schema, self.node, self)
