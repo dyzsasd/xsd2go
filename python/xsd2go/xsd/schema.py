@@ -30,7 +30,7 @@ class Schema(object):
         self.exported_class = set()
 
     def go_package_name(self):
-        return basename(self.file_path).split('.')[0]
+        return basename(self.file_path).split('.')[0].replace('-', '_')
 
     def add_element(self, element):
         if self.recursive:
