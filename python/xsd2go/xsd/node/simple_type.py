@@ -20,14 +20,14 @@ class SimpleType(Node):
         name_attr = (name_attr and name_attr[0]) or None
         return name_attr
 
-    def go_struct_name(self):
+    def go_type_name(self):
         if self.content is None:
             raise RuntimeError(
                 "SimpleType %s's def is empty", self.name)
-        return self.content.go_struct_name()
+        return self.content.go_type_name()
 
     def go_struct_attributes(self):
-        return None
+        return []
 
     def _parse(self):
         self.content = None
@@ -57,5 +57,5 @@ class SimpleType(Node):
     def go_struct_def(self):
         return None
 
-    def export_go_struct(self, recursive=True):
+    def export_go_struct(self, base_class, base_module):
         return

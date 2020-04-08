@@ -10,7 +10,7 @@ class Project(object):
         self.path = path
         self.schemas = {}
 
-    def load_schema(self, output_dir, package, recursive=False):
+    def load_schema(self, recursive=False):
         xsd_files = glob.glob(
             join(self.path, "*.xsd"), recursive=True)
         for f in xsd_files:
@@ -18,6 +18,5 @@ class Project(object):
                 print('loading %s' % f)
                 rel_path = relpath(f, self.path)
                 self.schemas[rel_path] = Schema(
-                    self, f, output_dir,
-                    package, recursive=recursive
+                    self, f, recursive=recursive
                 ).load()

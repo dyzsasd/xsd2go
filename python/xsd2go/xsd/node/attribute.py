@@ -26,6 +26,13 @@ class Attribute(Node):
         return _name
 
     @cached_property
+    def prefix(self):
+        if self.parent is not None:
+            return self.parent.prefix + self.name
+        else:
+            return self.name
+
+    @cached_property
     def ref_attribute(self):
         ref = self.node.attrib.get('ref')
         if ref is not None:
@@ -80,13 +87,23 @@ class Attribute(Node):
                     self.node.attrib['type']
                 )
         else:
-            go_struct_name = self.type_instance.go_struct_name()
+            go_struct_name = self.type_instance.go_type_name()
             if go_struct_name is None:
                 raise RuntimeError(
                     "Cannot find type name for %s", self.node.attrib['type'])
         
-        return '{field} {type} `xml:"{xml_field},attr"`;'.format(**{
-            "field": self.name,
-            "type": go_struct_name,
-            "xml_field": self.name
-        })
+        return {
+            "field_name": self.name,
+            "type_name": go_struct_name,
+            "is_array": False,
+            "is_pointer": False,
+            "type_instance": None,
+            "xml_field_name": self.name,
+            "xml_field_suffix": "attr",
+        }
+        
+        # return '{field} {type} `xml:"{xml_field},attr"`;'.format(**{
+        #     "field": self.name,
+        #     "type": go_struct_name,
+        #     "xml_field": self.name
+        # })

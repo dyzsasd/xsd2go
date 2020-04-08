@@ -1,4 +1,5 @@
 # Schema is a single xsd file
+from os.path import basename
 
 from cached_property import cached_property
 from lxml import etree
@@ -14,12 +15,10 @@ from .node.element_collection import Group
 
 
 class Schema(object):
-    def __init__(self, project, file_path, base_path, package, recursive=False):
+    def __init__(self, project, file_path, recursive=False):
         self.project = project
         self.file_path = file_path
         self.xml_tree = etree.parse(open(file_path))
-        self.base_path = base_path
-        self.package = package
 
         self.name2element = {}
         self.name2attribute = {}
@@ -29,6 +28,9 @@ class Schema(object):
 
         self.recursive = recursive
         self.exported_class = set()
+
+    def go_package_name(self):
+        return basename(self.file_path).split('.')[0]
 
     def add_element(self, element):
         if self.recursive:
@@ -172,6 +174,10 @@ class Schema(object):
             Attribute(self, node, None)
             for node in self.root.xpath("xsd:attribute", namespaces=self.nsmap)
         ]
+
+        for element in self.element_collection:
+            if element.nested_type is not None and isinstance(element.nested_type, ComplexType) and element.nested_type.name is None:
+                element.nested_type.name = element.name + 'EmbeddedType'
 
         if not self.recursive:
             for element in self.element_collection:

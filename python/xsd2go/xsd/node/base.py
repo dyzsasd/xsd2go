@@ -25,6 +25,16 @@ class Node(object):
     def name(self):
         return None
     
+    @cached_property
+    def prefix(self):
+        if self.parent is not None:
+            return self.parent.prefix
+        else:
+            return ""
+    
+    def go_package_name(self):
+        return self.schema.go_package_name()
+    
     def parse_ref_value(self, value):
         if not value:
             return None, None

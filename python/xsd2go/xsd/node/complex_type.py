@@ -1,4 +1,5 @@
 from os.path import join
+from pathlib import Path
 
 from cached_property import cached_property
 
@@ -24,6 +25,18 @@ class ComplexType(Node, AttributeContainerMixin, ElementContainerMixin):
         name_attr = (name_attr and name_attr[0]) or None
         return name_attr
 
+    @cached_property
+    def prefix(self):
+        if self.name is not None:
+            return self.name
+        elif self.name is None and self.parent is not None:
+            return self.parent.prefix
+        else:
+            raise RuntimeError(
+                "Cannot generate prefix for isolate complextype\n%s",
+                self.tostring()
+            )
+
     def _parse(self):
         self.content = None
 
@@ -47,40 +60,62 @@ class ComplexType(Node, AttributeContainerMixin, ElementContainerMixin):
             self._parse_attributes()
             self._parse_elements()
 
-    def go_struct_name(self):
-        return self.name
+    def go_type_name(self):
+        return self.name or self.prefix + 'BuiltinType'
+
+    def go_base_class(self):
+        if self.content is not None:
+            return self.content.go_base_class()
+        return None
 
     def go_struct_attributes(self):
-        lines = []
+        attrs = []
         added_attr = set()
         if self.content is not None:
             return self.content.go_struct_attributes()
         else:
-            for attr in self.attributes:
-                line = attr.export_go_def()
-                if line is not None:
-                    if attr.name in added_attr:
+            for attribute in self.attributes:
+                go_attr = attribute.export_go_def()
+                if go_attr is not None:
+                    if go_attr['field_name'] in added_attr:
                         continue
-                    added_attr.add(attr.name)
-                    lines.append(line)
+                    added_attr.add(go_attr['field_name'])
+                    attrs.append(go_attr)
             for elem in self.elements:
-                line = elem.export_go_def()
-                if line is not None:
-                    if elem.name in added_attr:
+                go_attr = elem.export_go_def()
+                if go_attr is not None:
+                    if go_attr['field_name'] in added_attr:
                         continue
-                    added_attr.add(elem.name)
-                    lines.append(line)
-        return lines
+                    added_attr.add(go_attr['field_name'])
+                    attrs.append(go_attr)
+        return attrs
 
     def go_struct_def(self):
         lines = []
         lines.append("struct {")
-        lines.extend(self.go_struct_attributes())
+
+        base_class = self.go_base_class()
+        if base_class is not None:
+            lines.append(base_class + ";")
+
+        for attribute in self.go_struct_attributes():
+            line = attribute['field_name'] + ' '
+            if attribute['is_array']:
+                line += '[]'
+            if attribute['is_pointer']:
+                line += '*'
+            line += attribute['type_name']
+            line += ' '
+            if attribute['xml_field_suffix']:
+                line += '`xml:"{xml_field_name},{xml_field_suffix}"`;'.format(**attribute)
+            else:
+                line += '`xml:"{xml_field_name}"`;'.format(**attribute)
+            lines.append(line)
         lines.append("}")
         return '\n'.join(lines)
     
-    def export_go_struct(self, name=None):
-        class_name = self.name or name
+    def export_go_struct(self, base_path, base_module):
+        class_name = self.go_type_name()
         if class_name is None:
             raise RuntimeError(
                 "Cannot export class without name:\n%s",
@@ -91,16 +126,39 @@ class ComplexType(Node, AttributeContainerMixin, ElementContainerMixin):
         else:
             self.schema.exported_class.add(class_name)
 
-        file_name = class_name + '.go'
+        packages = set()
+        for attr in self.go_struct_attributes():
+            if attr['type_instance'] is not None and isinstance(attr['type_instance'], ComplexType):
+                if attr['type_instance'].go_package_name() != self.go_package_name():
+                    packages.add('"' + join(base_module, base_path, attr['type_instance'].go_package_name()) + '"')
+
+        items = (self.go_base_class() or '').split('.')
+        if len(items) == 2:
+            packages.add('"' + join(base_module, base_path, items[0]) + '"')
+
+        dir_name = join(base_path, self.go_package_name())
+        Path(dir_name).mkdir(parents=True, exist_ok=True)
+
+        file_path = join(dir_name, class_name + '.go')
         lines = [
-            "package %s" % self.schema.package,
+            "package %s" % self.schema.go_package_name(),
+        ]
+
+        if packages:
+            lines.append('import (')
+            lines.extend(list(packages))
+            lines.append(')')
+        lines.extend([
             "",
             "type %s " % class_name + self.go_struct_def(),
             ""
-        ]
-        fout = open(join(self.schema.base_path, file_name), 'w')
+        ])
+        fout = open(file_path, 'w')
         fout.write('\n'.join(lines))
         fout.close()
+        for attr in self.go_struct_attributes():
+            if attr['type_instance'] is not None:
+                attr['type_instance'].export_go_struct(base_path, base_module)
 
 
 class Extension(Node, AttributeContainerMixin, ElementContainerMixin):
@@ -116,9 +174,6 @@ class Extension(Node, AttributeContainerMixin, ElementContainerMixin):
         refered_type_instance = self.schema.get_type_instance(
             type_name, type_ns)
 
-        if isinstance(refered_type_instance, ComplexType):
-            refered_type_instance.export_go_struct()
-
         if refered_type_instance is None:
             raise RuntimeError(
                 "Cannot find ref type for %s" % self.tostring())
@@ -129,10 +184,29 @@ class Extension(Node, AttributeContainerMixin, ElementContainerMixin):
         self._parse_attributes()
         self._parse_elements()
 
+    def go_base_class(self):
+        from .simple_type import SimpleType
+        
+        _, type_ns = self.parse_ref_value(
+            self.node.attrib['base'])
+        if type_ns == self.schema.nsmap[XSD_NS]:
+            return None
+        elif isinstance(self.base_type_instance, SimpleType):
+            return None
+        elif self.base_type_instance is None:
+            raise RuntimeError(
+                "Base class cannot be None\n%s", self.tostring())
+        
+        base_class_name = self.base_type_instance.go_type_name()
+        if self.go_package_name() != self.base_type_instance.go_package_name():
+            base_class_name = self.base_type_instance.go_package_name() + '.' + base_class_name
+
+        return base_class_name
+
     def go_struct_attributes(self):
         from .simple_type import SimpleType
 
-        lines = []
+        attrs = []
         type_name, type_ns = self.parse_ref_value(
             self.node.attrib['base'])
         if type_ns == self.schema.nsmap[XSD_NS]:
@@ -142,23 +216,47 @@ class Extension(Node, AttributeContainerMixin, ElementContainerMixin):
                     "Cannot find predefined go type for %s",
                     self.node.attrib['base']
                 )
-            lines.append(
-                'Text %s `xml:",chardata"`;' % go_struct_name)
+            attrs.append({
+                "field_name": 'Text',
+                "type_name": go_struct_name,
+                "is_array": False,
+                "is_pointer": False,
+                "type_instance": None,
+                "xml_field_name": "",
+                "xml_field_suffix": "chardata",
+            })
         elif isinstance(self.base_type_instance, SimpleType):
-            lines.append(
-                'Text %s `xml:",chardata"`;' % self.base_type_instance.go_struct_name())
-        else:
-            lines.append(self.base_type_instance.go_struct_name() + ";")
+            attrs.append({
+                "field_name": 'Text',
+                "type_name": self.base_type_instance.go_type_name(),
+                "is_array": False,
+                "is_pointer": False,
+                "type_instance": None,
+                "xml_field_name": "",
+                "xml_field_suffix": "chardata",
+            })
+        elif self.base_type_instance is None:
+            raise RuntimeError(
+                "Base class cannot be None\n%s", self.tostring())
+        # else:
+        #     lines.append(self.base_type_instance.go_type_name() + ";")
 
+        added_attr = set()
         for attr in self.attributes:
-            line = attr.export_go_def()
-            if line is not None:
-                lines.append(line)
+            go_attr = attr.export_go_def()
+            if go_attr is not None:
+                if go_attr['field_name'] in added_attr:
+                    continue
+                added_attr.add(go_attr['field_name'])
+                attrs.append(go_attr)
         for elem in self.elements:
-            line = elem.export_go_def()
-            if line is not None:
-                lines.append(line)
-        return lines
+            go_attr = elem.export_go_def()
+            if go_attr is not None:
+                if go_attr['field_name'] in added_attr:
+                    continue
+                added_attr.add(go_attr['field_name'])
+                attrs.append(go_attr)
+        return attrs
 
 
 class SimpleContentRestriction(Node, AttributeContainerMixin):
@@ -197,9 +295,11 @@ class SimpleContentRestriction(Node, AttributeContainerMixin):
         return refered_type_instance
     
     def go_struct_attributes(self):
+        return []
+    
+    def go_base_class(self):
         from .simple_type import SimpleType
 
-        lines = []
         type_name, type_ns = self.parse_ref_value(
             self.node.attrib['base'])
         if type_ns == self.schema.nsmap[XSD_NS]:
@@ -209,12 +309,15 @@ class SimpleContentRestriction(Node, AttributeContainerMixin):
                     "Cannot find predefined go type for %s",
                     self.node.attrib['base']
                 )
-            lines.append(go_struct_name + ";")
+            return go_struct_name
         elif isinstance(self.base_type_instance, SimpleType):
-            lines.append(self.base_type_instance.go_struct_name() + ";")
-        else:
-            lines.append(self.base_type_instance.go_struct_name() + ";")
-        return lines
+            return self.base_type_instance.go_type_name()
+
+        base_class_name = self.base_type_instance.go_type_name()
+        if self.go_package_name() != self.base_type_instance.go_package_name():
+            base_class_name = self.base_type_instance.go_package_name() + '.' + base_class_name
+
+        return base_class_name
 
 
 class ComplexContentRestriction(Node, AttributeContainerMixin, ElementContainerMixin):
@@ -254,9 +357,11 @@ class ComplexContentRestriction(Node, AttributeContainerMixin, ElementContainerM
         return refered_type_instance
 
     def go_struct_attributes(self):
+        return []
+
+    def go_base_class(self):
         from .simple_type import SimpleType
 
-        lines = []
         type_name, type_ns = self.parse_ref_value(
             self.node.attrib['base'])
         if type_ns == self.schema.nsmap[XSD_NS]:
@@ -266,12 +371,15 @@ class ComplexContentRestriction(Node, AttributeContainerMixin, ElementContainerM
                     "Cannot find predefined go type for %s",
                     self.node.attrib['base']
                 )
-            lines.append(go_struct_name + ";")
+            return go_struct_name
         elif isinstance(self.base_type_instance, SimpleType):
-            lines.append(self.base_type_instance.go_struct_name() + ";")
-        else:
-            lines.append(self.base_type_instance.go_struct_name() + ";")
-        return lines
+            return self.base_type_instance.go_type_name()
+        
+        base_class_name = self.base_type_instance.go_type_name()
+        if self.go_package_name() != self.base_type_instance.go_package_name():
+            base_class_name = self.base_type_instance.go_package_name() + '.' + base_class_name
+
+        return base_class_name
 
 
 class Content(Node):
@@ -293,6 +401,11 @@ class SimpleContent(Content):
             self.decorator = SimpleContentRestriction(
                 self.schema, restrictions[0], self)
 
+    def go_base_class(self):
+        if self.decorator is None:
+            raise RuntimeError("decorator is empty")
+        return self.decorator.go_base_class()
+
     def go_struct_attributes(self):
         if self.decorator is None:
             raise RuntimeError("decorator is empty")
@@ -313,6 +426,11 @@ class ComplexContent(Content):
         if restrictions:
             self.decorator = ComplexContentRestriction(
                 self.schema, restrictions[0], self)
+
+    def go_base_class(self):
+        if self.decorator is None:
+            raise RuntimeError("decorator is empty")
+        return self.decorator.go_base_class()
 
     def go_struct_attributes(self):
         if self.decorator is None:

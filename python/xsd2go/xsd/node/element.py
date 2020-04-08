@@ -28,6 +28,13 @@ class Element(Node):
         return _name
 
     @cached_property
+    def prefix(self):
+        if self.parent is not None:
+            return self.parent.prefix + self.name
+        else:
+            return self.name
+
+    @cached_property
     def ref_element(self):
         ref_name, ref_ns = self.parse_ref_value(
             self.node.attrib.get('ref', ""))
@@ -111,44 +118,52 @@ class Element(Node):
 
         # If the element is defined in other file
         if self.ref_element is not None:
-            return self.ref_element.export_go_def()
+            ref_go_def = self.ref_element.export_go_def()
+            if ref_go_def is not None and self.ref_element.go_package_name() != self.go_package_name():
+                if isinstance(ref_go_def['type_instance'], ComplexType) and len(ref_go_def['type_name'].split('.')) == 1:
+                    ref_go_def['type_name'] = self.ref_element.go_package_name() + "." + ref_go_def['type_name']
+            return ref_go_def
 
         type_name, type_ns = self.parse_ref_value(
             self.node.attrib.get('type', ''))
 
-        list_sign = (self.node.attrib.get('maxOccurs', '1') != '1' and '[]') or ''
-        pointer_sign = ''
-        go_type = ''
+        is_array = self.node.attrib.get('maxOccurs', '1') != '1'
+        is_pointer = True
+        go_struct_name = ''
+        type_instance = None
 
         # If element's type is builtin type, we don't use pointer
         if type_ns == self.schema.nsmap[XSD_NS]:
-            go_type = xsd2go_type.get(type_name)
-            if go_type is None:
+            go_struct_name = xsd2go_type.get(type_name)
+            if go_struct_name is None:
                 raise RuntimeError(
                     "Cannot find predefined go type for %s",
                     self.node.attrib['type']
                 )
+            is_pointer = False
         else:
-            go_struct_name = self.type_instance.go_struct_name()
+            go_struct_name = self.type_instance.go_type_name()
+            type_instance = self.type_instance
             # For simple type, it should always have a go_struct_name
-            if go_struct_name is None and isinstance(self.type_instance, SimpleType):
+            if go_struct_name is None:
                 raise RuntimeError(
                     "Cannot define an this element as an member of struct:\n%s",
                     self.tostring()
                 )
-            elif go_struct_name is None and isinstance(self.type_instance, ComplexType):
-                go_type = self.type_instance.go_struct_def()
-                pointer_sign = '*'
             else:
-                self.type_instance.export_go_struct()
-                go_type = go_struct_name
-                if isinstance(self.type_instance, ComplexType):
-                    pointer_sign = '*'
-        
-        return '{field} {list_sign}{pointer_sign}{type} `xml:"{xml_field}"`;'.format(**{
-            "field": self.name,
-            "type": go_type,
-            "xml_field": self.name,
-            "pointer_sign": pointer_sign,
-            "list_sign": list_sign,
-        })
+                is_pointer = isinstance(self.type_instance, ComplexType)
+            if (
+                isinstance(self.type_instance, ComplexType)
+                and self.type_instance.go_package_name() != self.go_package_name()
+            ):
+                go_struct_name = self.type_instance.go_package_name() + '.' + go_struct_name
+
+        return {
+            "field_name": self.name,
+            "type_name": go_struct_name,
+            "is_array": is_array,
+            "is_pointer": is_pointer,
+            "type_instance": type_instance,
+            "xml_field_name": self.name,
+            "xml_field_suffix": "",
+        }
