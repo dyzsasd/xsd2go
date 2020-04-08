@@ -19,6 +19,6 @@ PYTHONPATH=python python3 -m xsd2go.main -h
 ## Generate Go Structs
 
 ```bash
-PYTHONPATH=python/ python -m xsd2go.main <xsd file dir> --package <go package> --output <output dir> [--schemas xsd_file [xsd_file]]
+PYTHONPATH=python/ python -m xsd2go.main aa_xsd/ --base-path <output dir> --base-module <project module>
 ```
 
