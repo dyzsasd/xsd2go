@@ -93,7 +93,7 @@ class Attribute(Node):
                     "Cannot find type name for %s", self.node.attrib['type'])
         
         return {
-            "field_name": self.name,
+            "field_name": self.name.capitalize(),
             "type_name": go_struct_name,
             "is_array": False,
             "is_pointer": False,
@@ -101,9 +101,3 @@ class Attribute(Node):
             "xml_field_name": self.name,
             "xml_field_suffix": "attr",
         }
-        
-        # return '{field} {type} `xml:"{xml_field},attr"`;'.format(**{
-        #     "field": self.name,
-        #     "type": go_struct_name,
-        #     "xml_field": self.name
-        # })

@@ -159,7 +159,7 @@ class Element(Node):
                 go_struct_name = self.type_instance.go_package_name() + '.' + go_struct_name
 
         return {
-            "field_name": self.name,
+            "field_name": self.name.capitalize(),
             "type_name": go_struct_name,
             "is_array": is_array,
             "is_pointer": is_pointer,
