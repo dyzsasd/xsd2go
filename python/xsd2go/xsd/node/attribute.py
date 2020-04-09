@@ -99,5 +99,5 @@ class Attribute(Node):
             "is_pointer": False,
             "type_instance": None,
             "xml_field_name": self.name,
-            "xml_field_suffix": "attr",
+            "xml_field_suffix": "attr,omitempty",
         }

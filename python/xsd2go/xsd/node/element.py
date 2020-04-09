@@ -165,5 +165,5 @@ class Element(Node):
             "is_pointer": is_pointer,
             "type_instance": type_instance,
             "xml_field_name": self.name,
-            "xml_field_suffix": "",
+            "xml_field_suffix": "omitempty",
         }
