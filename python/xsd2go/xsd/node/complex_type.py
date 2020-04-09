@@ -107,9 +107,9 @@ class ComplexType(Node, AttributeContainerMixin, ElementContainerMixin):
             line += attribute['type_name']
             line += ' '
             if attribute['xml_field_suffix']:
-                line += '`xml:"{xml_field_name},{xml_field_suffix}"`;'.format(**attribute)
+                line += '`xml:"{xml_field_name},{xml_field_suffix},omitempty"`;'.format(**attribute)
             else:
-                line += '`xml:"{xml_field_name}"`;'.format(**attribute)
+                line += '`xml:"{xml_field_name},omitempty"`;'.format(**attribute)
             lines.append(line)
         lines.append("}")
         return '\n'.join(lines)

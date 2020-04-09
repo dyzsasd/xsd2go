@@ -96,7 +96,7 @@ class Attribute(Node):
             "field_name": self.name.capitalize(),
             "type_name": go_struct_name,
             "is_array": False,
-            "is_pointer": True,
+            "is_pointer": False,
             "type_instance": None,
             "xml_field_name": self.name,
             "xml_field_suffix": "attr",
