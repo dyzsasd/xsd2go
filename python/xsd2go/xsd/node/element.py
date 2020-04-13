@@ -119,9 +119,12 @@ class Element(Node):
         # If the element is defined in other file
         if self.ref_element is not None:
             ref_go_def = self.ref_element.export_go_def()
-            if ref_go_def is not None and self.ref_element.go_package_name() != self.go_package_name():
-                if isinstance(ref_go_def['type_instance'], ComplexType) and len(ref_go_def['type_name'].split('.')) == 1:
-                    ref_go_def['type_name'] = self.ref_element.go_package_name() + "." + ref_go_def['type_name']
+            if ref_go_def is not None:
+                if self.ref_element.go_package_name() != self.go_package_name():
+                    if isinstance(ref_go_def['type_instance'], ComplexType) and len(ref_go_def['type_name'].split('.')) == 1:
+                        ref_go_def['type_name'] = self.ref_element.go_package_name() + "." + ref_go_def['type_name']
+                if 'maxOccurs' in self.node.attrib:
+                    ref_go_def['is_array'] = (self.node.attrib['maxOccurs'] != '1')
             return ref_go_def
 
         type_name, type_ns = self.parse_ref_value(
