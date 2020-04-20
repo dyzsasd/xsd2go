@@ -10,10 +10,11 @@ from .simple_type import SimpleType
 
 
 class Element(Node):
-    def __init__(self, schema, node, parent):
+    def __init__(self, schema, node, parent, index=-1):
         super(Element, self).__init__(schema, node, parent)
         if 'name' in self.node.attrib:
             self.schema.add_element(self)
+        self.index = index
 
     @cached_property
     def name(self):
@@ -169,4 +170,5 @@ class Element(Node):
             "type_instance": type_instance,
             "xml_field_name": self.name,
             "xml_field_suffix": "omitempty",
+            "index": self.index,
         }

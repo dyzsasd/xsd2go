@@ -32,11 +32,11 @@ class ElementCollection(Node):
         from .element import Element
 
         self.nested_elements = [
-            Element(self.schema, node, self)
-            for node in self.node.xpath(
+            Element(self.schema, node, self, index)
+            for index, node in enumerate(self.node.xpath(
                 "xsd:element",
                 namespaces=self.schema.nsmap
-            )
+            ))
         ]
         self.collections = [
             create_collection(self.schema, node, self)

@@ -88,6 +88,8 @@ class ComplexType(Node, AttributeContainerMixin, ElementContainerMixin):
                         continue
                     added_attr.add(go_attr['field_name'])
                     attrs.append(go_attr)
+
+        attrs = sorted(attrs, key=lambda x: x.get("index", -1))
         return attrs
 
     def go_struct_def(self):
