@@ -41,7 +41,7 @@ class SimpleType(Node):
                 self.schema, restriction_node, self)
 
         list_node = self.node.xpath(
-            "xsd:restriction",
+            "xsd:list",
             namespaces=self.schema.nsmap
         )
         if list_node:
